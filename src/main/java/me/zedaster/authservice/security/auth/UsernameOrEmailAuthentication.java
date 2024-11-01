@@ -5,6 +5,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
+import java.util.Objects;
 
 /**
  * Authentication with username or email and password.
@@ -95,5 +96,18 @@ public class UsernameOrEmailAuthentication implements Authentication {
     @Override
     public String getName() {
         return usernameOrEmail;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        UsernameOrEmailAuthentication that = (UsernameOrEmailAuthentication) o;
+        return Objects.equals(usernameOrEmail, that.usernameOrEmail) && Objects.equals(password, that.password);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(usernameOrEmail, password);
     }
 }

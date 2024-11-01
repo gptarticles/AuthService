@@ -2,6 +2,7 @@ package me.zedaster.authservice.controller;
 
 import me.zedaster.authservice.dto.ErrorDto;
 import me.zedaster.authservice.dto.ValidationErrorDto;
+import me.zedaster.authservice.dto.auth.UserCredentialsDto;
 import me.zedaster.authservice.exception.AuthException;
 import me.zedaster.authservice.exception.JwtException;
 import me.zedaster.authservice.exception.ProfileException;
@@ -56,7 +57,12 @@ public class GlobalExceptionHandler {
      * @return Json with error message from the exception.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ValidationErrorDto> handleValidationException(MethodArgumentNotValidException e) {
+    public ResponseEntity<ErrorDto> handleValidationException(MethodArgumentNotValidException e) {
+        // If validation is failed in UserCredentialsDto, then standard exception will be thrown for security reasons
+        if (e.getBindingResult().getTarget() instanceof UserCredentialsDto) {
+            return handleAuthException(AuthException.newInvalidCredentialsException());
+        }
+
         Map<String, String> errorsByField = new HashMap<>();
         e.getBindingResult().getFieldErrors().forEach(error ->
                 errorsByField.put(error.getField(), error.getDefaultMessage())

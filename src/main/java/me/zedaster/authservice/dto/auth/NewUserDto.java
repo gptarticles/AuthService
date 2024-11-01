@@ -2,8 +2,8 @@ package me.zedaster.authservice.dto.auth;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -25,7 +25,9 @@ public class NewUserDto {
      *     <li>No more than 32 characters</li>
      *     <li>May contain latin letters, digits, periods and underscores only</li>
      *     <li>Must start with a letter</li>
+     *     <li>Must be not null</li>
      */
+    @NotNull(message = "Username must be not null!")
     @Nickname
     private String username;
 
@@ -45,6 +47,7 @@ public class NewUserDto {
      *     <li>Other characters that are also valid:~ ! ? @ # $ % ^ & * _ - + ( ) [ ] { } > < / \ | " ' . , : ;</li>
      * </ul>
      */
+    @NotNull(message = "Password must be not null!")
     @Pattern(regexp = "(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9~!?@#$%^&*_\\-+()\\[\\]{}></\\\\|\"'.,:;]{8,128}",
             message = "Password does not meet the requirements!")
     private String password;
@@ -54,7 +57,7 @@ public class NewUserDto {
      * <br/><br/>
      * Must contain a correct email address
      */
-    @Email(message = "The email is incorrect!")
     @NotEmpty(message = "The email must not be empty!")
+    @Email(message = "The email is incorrect!")
     private String email;
 }

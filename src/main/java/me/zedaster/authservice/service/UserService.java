@@ -11,8 +11,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
-
 /**
  * Service for working with users
  */
@@ -56,16 +54,6 @@ public class UserService {
                 .email(email)
                 .build();
         return userRepository.save(user);
-    }
-
-    /**
-     * Find a user by nickname or email and password.
-     * @param usernameOrEmail Nickname or email of the user.
-     * @return User if found, empty otherwise.
-     */
-    @Transactional
-    public Optional<User> findUserByNickOrEmail(String usernameOrEmail) {
-        return userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);
     }
 
     /**

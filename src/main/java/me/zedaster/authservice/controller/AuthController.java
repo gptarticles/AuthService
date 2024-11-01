@@ -65,19 +65,14 @@ public class AuthController {
      * @return DTO of JWT access token and refresh token.
      */
     @PostMapping("/login")
-    public JwtPairDto login(@RequestBody UserCredentialsDto userCredentialsDto) throws AuthException {
+    public JwtPairDto login(@Valid @RequestBody UserCredentialsDto userCredentialsDto) throws AuthException {
         String usernameOrEmail = userCredentialsDto.getUsernameOrEmail();
         String password = userCredentialsDto.getPassword();
-
-        if (usernameOrEmail == null || usernameOrEmail.isEmpty() || password == null || password.length() < 8 ||
-            password.length() > 128) {
-            throw new AuthException("The username or password are incorrect!");
-        }
 
         Authentication authentication = new UsernameOrEmailAuthentication(usernameOrEmail, password);
         UsernameOrEmailAuthentication resultAuthentication = (UsernameOrEmailAuthentication) authenticationManager.authenticate(authentication);
         if (!resultAuthentication.isAuthenticated()) {
-            throw new AuthException("The username or password are incorrect!");
+            throw AuthException.newInvalidCredentialsException();
         }
 
         SecurityContextHolder.getContext().setAuthentication(resultAuthentication);
