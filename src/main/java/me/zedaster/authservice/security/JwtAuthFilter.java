@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import me.zedaster.authservice.exception.JwtException;
 import me.zedaster.authservice.security.auth.UsernameOrEmailAuthentication;
 import me.zedaster.authservice.service.JwtService;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
@@ -34,7 +35,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String authHeader = request.getHeader(HEADER_NAME);
-        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX) || SecurityContextHolder.getContext().getAuthentication() != null) {
+        // If there is no auth token or auth context, then skip the filter
+        Authentication contextAuthentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX) || contextAuthentication != null) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -43,15 +46,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         long userId;
         try {
-            userId = jwtService.extractUserId(accessToken);
+            userId = jwtService.verifyAndExtractUserId(accessToken);
         } catch (JwtException e) {
             filterChain.doFilter(request, response);
             return;
         }
 
         UserDetails userDetails = idUserDetailsService.loadUserById(userId);
-//        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-//        authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         UsernameOrEmailAuthentication authentication = UsernameOrEmailAuthentication.createAuthenticated(userDetails);
         SecurityContextHolder.getContext().setAuthentication(authentication);
 

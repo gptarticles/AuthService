@@ -44,12 +44,12 @@ public class JwtService {
     }
 
     /**
-     * Extract the user ID from the JWT access token.
+     * Validate JWT access token and extract the user ID from the token.
      * @param accessToken JWT access token.
      * @throws JwtException If the token is invalid.
      * @return User ID.
      */
-    public long extractUserId(String accessToken) throws JwtException {
+    public long verifyAndExtractUserId(String accessToken) throws JwtException {
         try {
             return Jwts
                     .parser()

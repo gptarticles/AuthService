@@ -1,0 +1,17 @@
+jwt:
+    secret:
+        access: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437
+        refresh: 4267566B59703373367639792F423F4528482B4D6252655468576D5A71347468
+spring:
+    datasource:
+        driver-class-name: org.h2.Driver
+        password: ''
+        url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+        username: sa
+    jpa:
+        hibernate:
+            ddl-auto: create-drop
+        properties:
+            hibernate:
+                dialect: org.hibernate.dialect.H2Dialect
+        show-sql: true
