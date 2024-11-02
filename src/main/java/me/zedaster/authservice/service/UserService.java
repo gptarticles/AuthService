@@ -5,6 +5,7 @@ import me.zedaster.authservice.dto.auth.NewUserDto;
 import me.zedaster.authservice.dto.auth.UserCredentialsDto;
 import me.zedaster.authservice.exception.AuthException;
 import me.zedaster.authservice.exception.ProfileException;
+import me.zedaster.authservice.exception.UserIdException;
 import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.repository.UserRepository;
 import me.zedaster.authservice.service.encoder.PasswordEncoder;
@@ -81,10 +82,26 @@ public class UserService {
     }
 
     /**
-     * Checks if the password is correct for user with specified if
+     * Returns username of user by its ID
+     * @param userId ID of the user
+     * @return username of the user
+     */
+    @Transactional
+    public String getUsername(long userId) {
+        if (userId <= 0) {
+            throw UserIdException.newIncorrectException();
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> UserIdException.newNotFoundException(userId));
+        return user.getUsername();
+    }
+
+    /**
+     * Checks if the password belongs to the user with specified id
      * @param userId ID of the user
      * @param rawPassword Password to check
-     * @return True if the password is correct
+     * @return True if it is the right password of the user
      */
     @Transactional
     public boolean isPasswordCorrect(long userId, String rawPassword) {
@@ -106,7 +123,7 @@ public class UserService {
     @Transactional
     public void changeUsername(long userId, String newUsername) throws ProfileException {
         if (userId <= 0) {
-            throw new IllegalArgumentException("The user ID is incorrect!");
+            throw UserIdException.newIncorrectException();
         }
 
         boolean isUsernameTaken = userRepository.existsByUsername(newUsername);
@@ -115,7 +132,7 @@ public class UserService {
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User with ID %d not found!".formatted(userId)));
+                .orElseThrow(() -> UserIdException.newNotFoundException(userId));
         user.setUsername(newUsername);
         userRepository.save(user);
     }

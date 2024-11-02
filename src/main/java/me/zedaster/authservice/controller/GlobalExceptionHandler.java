@@ -6,6 +6,7 @@ import me.zedaster.authservice.dto.auth.UserCredentialsDto;
 import me.zedaster.authservice.exception.AuthException;
 import me.zedaster.authservice.exception.JwtException;
 import me.zedaster.authservice.exception.ProfileException;
+import me.zedaster.authservice.exception.UserIdException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -20,35 +21,14 @@ import java.util.Map;
  */
 @ControllerAdvice
 public class GlobalExceptionHandler {
-
     /**
-     * Handles {@link AuthException}
-     * @param e The instance of the exception.
+     * Handles exceptions that can be shown with a simple error message.
+     * @param exception The instance of the exception.
      * @return Json with error message from the exception.
      */
-    @ExceptionHandler(AuthException.class)
-    public ResponseEntity<ErrorDto> handleAuthException(AuthException e) {
-        return new ResponseEntity<>(new ErrorDto(e.getMessage()), HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * Handles {@link JwtException}
-     * @param e The instance of the exception.
-     * @return Json with error message from the exception.
-     */
-    @ExceptionHandler(JwtException.class)
-    public ResponseEntity<ErrorDto> handleJwtException(JwtException e) {
-        return new ResponseEntity<>(new ErrorDto(e.getMessage()), HttpStatus.BAD_REQUEST);
-    }
-
-    /**
-     * Handles {@link ProfileException}
-     * @param e The instance of the exception.
-     * @return Json with error message from the exception.
-     */
-    @ExceptionHandler(ProfileException.class)
-    public ResponseEntity<ErrorDto> handleProfileException(ProfileException e) {
-        return new ResponseEntity<>(new ErrorDto(e.getMessage()), HttpStatus.BAD_REQUEST);
+    @ExceptionHandler({AuthException.class, JwtException.class, ProfileException.class, UserIdException.class})
+    public ResponseEntity<ErrorDto> handleSimpleException(Exception exception) {
+        return new ResponseEntity<>(new ErrorDto(exception.getMessage()), HttpStatus.BAD_REQUEST);
     }
 
     /**
@@ -60,7 +40,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorDto> handleValidationException(MethodArgumentNotValidException e) {
         // If validation is failed in UserCredentialsDto, then standard exception will be thrown for security reasons
         if (e.getBindingResult().getTarget() instanceof UserCredentialsDto) {
-            return handleAuthException(AuthException.newInvalidCredentialsException());
+            return handleSimpleException(AuthException.newInvalidCredentialsException());
         }
 
         Map<String, String> errorsByField = new HashMap<>();

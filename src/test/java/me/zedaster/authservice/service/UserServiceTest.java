@@ -2,6 +2,7 @@ package me.zedaster.authservice.service;
 
 import me.zedaster.authservice.dto.auth.UserCredentialsDto;
 import me.zedaster.authservice.exception.ProfileException;
+import me.zedaster.authservice.exception.UserIdException;
 import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.repository.UserRepository;
 import me.zedaster.authservice.service.encoder.PasswordEncoder;
@@ -22,7 +23,7 @@ import static org.mockito.Mockito.*;
  */
 @SpringBootTest(classes = {UserService.class})
 public class UserServiceTest {
-    // Now there are only tests for UserService#getUser and UserService#changeUsername
+    // Now there are only tests for UserService#getUser, UserService#getUsername, UserService#changeUsername
 
     @Autowired
     private UserService userService;
@@ -84,6 +85,43 @@ public class UserServiceTest {
     }
 
     /**
+     * Test for getting username by right userId
+     */
+    @Test
+    public void getUsernameByRightId() {
+        User fakeUser = mock(User.class);
+        when(fakeUser.getUsername()).thenReturn("barbra.streisand");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeUser));
+
+        String username = userService.getUsername(1L);
+        assertEquals("barbra.streisand", username);
+    }
+
+    /**
+     * Test for getting username by incorrect userId
+     */
+    @Test
+    public void getUsernameByIncorrectId() {
+        UserIdException ex = assertThrows(UserIdException.class,
+                () -> userService.getUsername(0L));
+        assertEquals("The user ID is incorrect!", ex.getMessage());
+        verify(userRepository, never()).findById(anyLong());
+    }
+
+    /**
+     * Test for getting username by userId that doesn't exist
+     */
+    @Test
+    public void getUsernameByNonExistentId() {
+        when(userRepository.findById(100L)).thenReturn(Optional.empty());
+
+        UserIdException ex = assertThrows(UserIdException.class, () ->
+                userService.getUsername(100L));
+        assertEquals("User with ID 100 not found!", ex.getMessage());
+    }
+
+
+    /**
      * Test for successful changing of the username
      */
     @Test
@@ -119,7 +157,7 @@ public class UserServiceTest {
      */
     @Test
     public void changeUsernameIncorrectUserId() {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        UserIdException ex = assertThrows(UserIdException.class,
                 () -> userService.changeUsername(0L, "newname"));
         assertEquals("The user ID is incorrect!", ex.getMessage());
         verify(userRepository, never()).existsByUsername(anyString());
@@ -133,7 +171,7 @@ public class UserServiceTest {
         when(userRepository.existsByUsername("newname")).thenReturn(false);
         when(userRepository.findById(100L)).thenReturn(Optional.empty());
 
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+        UserIdException ex = assertThrows(UserIdException.class,
                 () -> userService.changeUsername(100L, "newname"));
         assertEquals("User with ID 100 not found!", ex.getMessage());
 
