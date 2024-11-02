@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import me.zedaster.authservice.annotation.ShallowPassword;
 
 /**
  * DTO for logging in a user.
@@ -16,6 +17,7 @@ public class UserCredentialsDto {
     /**
      * Username or email of the user.
      */
+    // 254 is max size of an email
     @NotNull(message = "Username or email must be not null!")
     @Pattern(regexp = "^[a-zA-Z0-9._+-@]{3,254}$",
             message = "Username or email is incorrect!")
@@ -25,7 +27,6 @@ public class UserCredentialsDto {
      * Password of the user.
      */
     @NotNull(message = "Password must be not null!")
-    @Pattern(regexp = "[a-zA-Z0-9~!?@#$%^&*_\\-+()\\[\\]{}></\\\\|\"'.,:;]{8,128}",
-            message = "Password is incorrect!")
+    @ShallowPassword
     private String password;
 }

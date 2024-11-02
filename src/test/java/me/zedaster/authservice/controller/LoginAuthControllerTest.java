@@ -1,17 +1,16 @@
 package me.zedaster.authservice.controller;
 
 import jakarta.annotation.Nullable;
-import me.zedaster.authservice.security.auth.UsernameOrEmailAuthentication;
+import me.zedaster.authservice.service.JwtService;
+import me.zedaster.authservice.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
@@ -22,10 +21,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Tests for login method in {@link AuthController}
  */
-@ActiveProfiles("test")
-@SpringBootTest
-@AutoConfigureMockMvc
-@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
+@WebMvcTest(AuthController.class)
 public class LoginAuthControllerTest {
     /**
      * Mock MVC object for testing.
@@ -34,10 +30,16 @@ public class LoginAuthControllerTest {
     private MockMvc mockMvc;
 
     /**
-     * Authentication manager for testing login.
+     * Mock service for getting users
      */
     @MockBean
-    private AuthenticationManager authenticationManager;
+    private UserService userService;
+
+    /**
+     * Stub just for running the tests
+     */
+    @MockBean
+    private JwtService jwtService;
 
     // Right login tested in AuthControllerTest.java
 
@@ -47,9 +49,7 @@ public class LoginAuthControllerTest {
      */
     @Test
     public void wrongLogin() throws Exception {
-        UsernameOrEmailAuthentication fakeAuthentication = mock(UsernameOrEmailAuthentication.class);
-        when(fakeAuthentication.isAuthenticated()).thenReturn(false);
-        when(authenticationManager.authenticate(any())).thenReturn(fakeAuthentication);
+        when(userService.getUser(any())).thenReturn(Optional.empty());
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -57,8 +57,8 @@ public class LoginAuthControllerTest {
                 .andExpect(status().is(400))
                 .andExpect(jsonPath("$.message").value("The username or password are incorrect!"));
 
-        verify(authenticationManager, times(1)).authenticate(argThat(auth ->
-                auth.getPrincipal().equals("user") && auth.getCredentials().equals("Password1!")));
+        verify(userService, times(1)).getUser(argThat(credentials ->
+                credentials.getUsernameOrEmail().equals("user") && credentials.getPassword().equals("Password1!")));
     }
 
     /**
@@ -174,7 +174,7 @@ public class LoginAuthControllerTest {
                 .andExpect(status().is(400))
                 .andExpect(jsonPath("$.message").value("The username or password are incorrect!"));
 
-        verify(authenticationManager, never()).authenticate(any());
+        verify(userService, never()).getUser(any());
     }
 
     /**

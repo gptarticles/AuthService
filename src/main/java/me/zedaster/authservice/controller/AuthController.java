@@ -7,19 +7,15 @@ import me.zedaster.authservice.dto.auth.*;
 import me.zedaster.authservice.exception.AuthException;
 import me.zedaster.authservice.exception.JwtException;
 import me.zedaster.authservice.model.User;
-import me.zedaster.authservice.security.IdUserDetails;
-import me.zedaster.authservice.security.IdUserDetailsService;
-import me.zedaster.authservice.security.auth.UsernameOrEmailAuthentication;
 import me.zedaster.authservice.service.JwtService;
 import me.zedaster.authservice.service.UserService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Optional;
 
 /**
  * Controller for handling authentication requests.
@@ -40,16 +36,6 @@ public class AuthController {
     private final JwtService jwtService;
 
     /**
-     * Spring Security authentication manager.
-     */
-    private final AuthenticationManager authenticationManager;
-
-    /**
-     * Service for loading user details (for Spring Security) by ID.
-     */
-    private final IdUserDetailsService idUserDetailsService;
-
-    /**
      * Register a new user.
      * @param registerDto DTO of the user to register.
      */
@@ -66,18 +52,11 @@ public class AuthController {
      */
     @PostMapping("/login")
     public JwtPairDto login(@Valid @RequestBody UserCredentialsDto userCredentialsDto) throws AuthException {
-        String usernameOrEmail = userCredentialsDto.getUsernameOrEmail();
-        String password = userCredentialsDto.getPassword();
-
-        Authentication authentication = new UsernameOrEmailAuthentication(usernameOrEmail, password);
-        UsernameOrEmailAuthentication resultAuthentication = (UsernameOrEmailAuthentication) authenticationManager.authenticate(authentication);
-        if (!resultAuthentication.isAuthenticated()) {
+        Optional<User> user = userService.getUser(userCredentialsDto);
+        if (user.isEmpty()) {
             throw AuthException.newInvalidCredentialsException();
         }
-
-        SecurityContextHolder.getContext().setAuthentication(resultAuthentication);
-        IdUserDetails userDetails = (IdUserDetails) resultAuthentication.getDetails();
-        return jwtService.generateTokens(userDetails.getId(), userDetails.getUsername());
+        return jwtService.generateTokens(user.get().getId(), user.get().getUsername());
     }
 
     /**

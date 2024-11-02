@@ -2,14 +2,16 @@ package me.zedaster.authservice.service;
 
 import lombok.AllArgsConstructor;
 import me.zedaster.authservice.dto.auth.NewUserDto;
+import me.zedaster.authservice.dto.auth.UserCredentialsDto;
 import me.zedaster.authservice.exception.AuthException;
 import me.zedaster.authservice.exception.ProfileException;
-import me.zedaster.authservice.exception.UserByIdNotFoundException;
 import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.repository.UserRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import me.zedaster.authservice.service.encoder.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 /**
  * Service for working with users
@@ -57,6 +59,45 @@ public class UserService {
     }
 
     /**
+     * Finds a user with specified credentials
+     * @param credentials Credentials of the user
+     * @return User or empty optional if user with these credentials doesn't exist
+     */
+    @Transactional
+    public Optional<User> getUser(UserCredentialsDto credentials) {
+        String usernameOrEmail = credentials.getUsernameOrEmail();
+        String rawPassword = credentials.getPassword();
+        Optional<User> optionalUser = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);
+        if (optionalUser.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String encryptedPassword = optionalUser.get().getPassword();
+        if (!passwordEncoder.matches(rawPassword, encryptedPassword)) {
+            return Optional.empty();
+        }
+
+        return optionalUser;
+    }
+
+    /**
+     * Checks if the password is correct for user with specified if
+     * @param userId ID of the user
+     * @param rawPassword Password to check
+     * @return True if the password is correct
+     */
+    @Transactional
+    public boolean isPasswordCorrect(long userId, String rawPassword) {
+        Optional<User> optionalUser = userRepository.findById(userId);
+        if (optionalUser.isEmpty()) {
+            return false;
+        }
+
+        String encryptedPassword = optionalUser.get().getPassword();
+        return passwordEncoder.matches(rawPassword, encryptedPassword);
+    }
+
+    /**
      * Change the username of the user.
      * @param userId ID of the user.
      * @param newUsername New valid username.
@@ -64,13 +105,17 @@ public class UserService {
      */
     @Transactional
     public void changeUsername(long userId, String newUsername) throws ProfileException {
+        if (userId <= 0) {
+            throw new IllegalArgumentException("The user ID is incorrect!");
+        }
+
         boolean isUsernameTaken = userRepository.existsByUsername(newUsername);
         if (isUsernameTaken) {
             throw new ProfileException("The username is already taken!");
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UserByIdNotFoundException("User with ID %d not found".formatted(userId)));
+                .orElseThrow(() -> new IllegalArgumentException("User with ID %d not found!".formatted(userId)));
         user.setUsername(newUsername);
         userRepository.save(user);
     }

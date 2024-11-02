@@ -3,10 +3,10 @@ package me.zedaster.authservice.dto.auth;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import me.zedaster.authservice.annotation.ExactPassword;
 import me.zedaster.authservice.annotation.Nickname;
 
 /**
@@ -26,6 +26,7 @@ public class NewUserDto {
      *     <li>May contain latin letters, digits, periods and underscores only</li>
      *     <li>Must start with a letter</li>
      *     <li>Must be not null</li>
+     *  </ul>
      */
     @NotNull(message = "Username must be not null!")
     @Nickname
@@ -44,12 +45,11 @@ public class NewUserDto {
      *     <li>At least one numeral</li>
      *     <li>Arabic numerals only</li>
      *     <li>No spaces</li>
-     *     <li>Other characters that are also valid:~ ! ? @ # $ % ^ & * _ - + ( ) [ ] { } > < / \ | " ' . , : ;</li>
+     *     <li>Other characters that are also valid: ~ ! ? @ # $ % ^ & * _ - + ( ) [ ] { } > < / \ | " ' . , : ;</li>
      * </ul>
      */
     @NotNull(message = "Password must be not null!")
-    @Pattern(regexp = "(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])[a-zA-Z0-9~!?@#$%^&*_\\-+()\\[\\]{}></\\\\|\"'.,:;]{8,128}",
-            message = "Password does not meet the requirements!")
+    @ExactPassword
     private String password;
 
     /**
