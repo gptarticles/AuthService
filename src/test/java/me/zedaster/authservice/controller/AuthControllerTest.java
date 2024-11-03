@@ -10,11 +10,14 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.Map;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -57,15 +60,19 @@ public class AuthControllerTest {
         String regRefreshToken = registerResultJson.get("refreshToken").toString();
 
         // Verifying the access token after registration
-        mockMvc.perform(post("/auth/verifyToken")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"accessToken\": \"%s\"}".formatted(regAccessToken)))
+        URI regVerifyTokenUri = UriComponentsBuilder.fromUriString("/auth/verifyToken")
+                .queryParam("accessToken", regAccessToken)
+                .build()
+                .toUri();
+        mockMvc.perform(get(regVerifyTokenUri))
                 .andExpect(status().isOk());
 
         // Refresh the access token after registration
-        MvcResult refreshResult = mockMvc.perform(post("/auth/refreshToken")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\": \"%s\"}".formatted(regRefreshToken)))
+        URI regRefreshTokenUri = UriComponentsBuilder.fromUriString("/auth/refreshToken")
+                .queryParam("refreshToken", regRefreshToken)
+                .build()
+                .toUri();
+        MvcResult refreshResult = mockMvc.perform(get(regRefreshTokenUri))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.*", hasSize(2)))
                 .andReturn();
@@ -76,15 +83,19 @@ public class AuthControllerTest {
         String refRefreshToken = refreshResultJson.get("refreshToken").toString();
 
         // Assert the refreshed access token
-        mockMvc.perform(post("/auth/verifyToken")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"accessToken\": \"%s\"}".formatted(refAccessToken)))
+        URI refVerifyTokenUri = UriComponentsBuilder.fromUriString("/auth/verifyToken")
+                .queryParam("accessToken", refAccessToken)
+                .build()
+                .toUri();
+        mockMvc.perform(get(refVerifyTokenUri))
                 .andExpect(status().isOk());
 
         // Assert the refreshed refresh token
-        mockMvc.perform(post("/auth/refreshToken")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\": \"%s\"}".formatted(refRefreshToken)))
+        URI refRefreshTokenUri = UriComponentsBuilder.fromUriString("/auth/refreshToken")
+                .queryParam("refreshToken", regRefreshToken)
+                .build()
+                .toUri();
+        mockMvc.perform(get(refRefreshTokenUri))
                 .andExpect(status().isOk());
 
         // Log in into the created account by email
@@ -101,19 +112,23 @@ public class AuthControllerTest {
                 .andReturn();
 
         Map<String, Object> loginResultJson = mvcUtils.jsonResultToMap(loginResult);
-        String accessToken = loginResultJson.get("accessToken").toString();
-        String refreshToken = loginResultJson.get("refreshToken").toString();
+        String emailAccessToken = loginResultJson.get("accessToken").toString();
+        String emailRefreshToken = loginResultJson.get("refreshToken").toString();
 
         // Verifying the access token after login
-        mockMvc.perform(post("/auth/verifyToken")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"accessToken\": \"%s\"}".formatted(accessToken)))
+        URI emailVerifyTokenUri = UriComponentsBuilder.fromUriString("/auth/verifyToken")
+                .queryParam("accessToken", emailAccessToken)
+                .build()
+                .toUri();
+        mockMvc.perform(get(emailVerifyTokenUri))
                 .andExpect(status().isOk());
 
         // Verifying the refresh token after login
-        mockMvc.perform(post("/auth/refreshToken")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\": \"%s\"}".formatted(refreshToken)))
+        URI emailRefreshTokenUri = UriComponentsBuilder.fromUriString("/auth/refreshToken")
+                .queryParam("refreshToken", emailRefreshToken)
+                .build()
+                .toUri();
+        mockMvc.perform(get(emailRefreshTokenUri))
                 .andExpect(status().isOk());
     }
 
@@ -131,9 +146,11 @@ public class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\": \"user\", \"password\": \"Password1!\", \"email\": \"user@example.com\"}"));
 
-        mockMvc.perform(post("/auth/verifyToken")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"accessToken\": \"%s\"}".formatted(expiredToken)))
+        URI verifyTokenUri = UriComponentsBuilder.fromUriString("/auth/verifyToken")
+                .queryParam("accessToken", expiredToken)
+                .build()
+                .toUri();
+        mockMvc.perform(get(verifyTokenUri))
                 .andExpect(status().is(400))
                 .andExpect(jsonPath("$.message").value("The access token is invalid!"));
     }
@@ -152,9 +169,11 @@ public class AuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"username\": \"user\", \"password\": \"Password1!\", \"email\": \"user@example.com\"}"));
 
-        mockMvc.perform(post("/auth/refreshToken")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"refreshToken\": \"%s\"}".formatted(expiredToken)))
+        URI refreshTokenUri = UriComponentsBuilder.fromUriString("/auth/refreshToken")
+                .queryParam("refreshToken", expiredToken)
+                .build()
+                .toUri();
+        mockMvc.perform(get(refreshTokenUri))
                 .andExpect(status().is(400))
                 .andExpect(jsonPath("$.message").value("The refresh token is invalid!"));
     }

@@ -10,10 +10,7 @@ import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.service.JwtService;
 import me.zedaster.authservice.service.UserService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
@@ -61,22 +58,22 @@ public class AuthController {
 
     /**
      * Verify the JWT access token.
-     * @param accessTokenDto DTO of JWT access token.
+     * @param accessToken Access token
      * @return DTO with the result of the verification.
      */
-    @PostMapping("/verifyToken")
-    public ResponseEntity<SuccessDto> verifyToken(@RequestBody AccessTokenDto accessTokenDto) throws JwtException {
-        jwtService.validateAccessToken(accessTokenDto.getAccessToken());
+    @GetMapping("/verifyToken")
+    public ResponseEntity<SuccessDto> verifyToken(@RequestParam String accessToken) throws JwtException {
+        jwtService.validateAccessToken(accessToken);
         return ResponseEntity.ok(new SuccessDto(true));
     }
 
     /**
-     * Refresh the JWT access token.
-     * @param refreshTokenDto DTO of JWT Refresh token.
+     * Refresh a pair of JWT tokens
+     * @param refreshToken Refresh token.
      * @return DTO of the new JWT access token and refresh token.
      */
-    @PostMapping("/refreshToken")
-    public JwtPairDto refreshToken(@RequestBody RefreshTokenDto refreshTokenDto) throws JwtException {
-        return jwtService.refreshToken(refreshTokenDto.getRefreshToken());
+    @GetMapping("/refreshToken")
+    public JwtPairDto refreshToken(@RequestParam String refreshToken) throws JwtException {
+        return jwtService.refreshToken(refreshToken);
     }
 }
