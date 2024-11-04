@@ -30,7 +30,7 @@ public class ProtectedProfileController {
 
     @PostMapping("/changeUsername")
     public JwtPairDto changeUsername(@Valid @RequestBody ChangeUsernameDto changeUsernameDto,
-                                     @RequestParam("tokenPayload.userId") Long userId)
+                                     @RequestParam("tokenPayload.sub") Long userId)
             throws AuthException, ProfileException {
         if (!userService.isPasswordCorrect(userId, changeUsernameDto.getPassword())) {
             throw new AuthException("The password is incorrect!");

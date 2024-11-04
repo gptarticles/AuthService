@@ -44,26 +44,6 @@ public class JwtService {
     }
 
     /**
-     * Validate JWT access token and extract the user ID from the token.
-     * @param accessToken JWT access token.
-     * @throws JwtException If the token is invalid.
-     * @return User ID.
-     */
-    public long verifyAndExtractUserId(String accessToken) throws JwtException {
-        try {
-            return Jwts
-                    .parser()
-                    .verifyWith(accessSecretKey)
-                    .build()
-                    .parseSignedClaims(accessToken)
-                    .getPayload()
-                    .get("userId", Long.class);
-        } catch (io.jsonwebtoken.JwtException e) {
-            throw new JwtException("Invalid access token");
-        }
-    }
-
-    /**
      * Validate the JWT access token.
      * @param accessToken JWT access token.
      * @throws JwtException If the token is invalid.
@@ -89,7 +69,7 @@ public class JwtService {
      */
     public JwtPairDto generateTokens(long userId, String username) {
         String accessToken = Jwts.builder()
-                .claim("userId", userId)
+                .claim("sub", String.valueOf(userId))
                 .claim("username", username)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_LIFETIME))
@@ -97,7 +77,7 @@ public class JwtService {
                 .compact();
 
         String refreshToken = Jwts.builder()
-                .claim("userId", userId)
+                .claim("sub", String.valueOf(userId))
                 .claim("username", username)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_LIFETIME))
@@ -124,7 +104,7 @@ public class JwtService {
                     .build()
                     .parseSignedClaims(refreshToken)
                     .getPayload();
-            userId = claims.get("userId", Long.class);
+            userId = Long.parseLong(claims.get("sub", String.class));
             username = claims.get("username", String.class);
         } catch (io.jsonwebtoken.JwtException e) {
             throw new JwtException("The refresh token is invalid!");

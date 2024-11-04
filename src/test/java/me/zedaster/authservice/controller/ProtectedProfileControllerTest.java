@@ -28,7 +28,7 @@ public class ProtectedProfileControllerTest {
 
     private final static URI CHANGE_PASS_URL_FOR_USERID_ONE = UriComponentsBuilder
             .fromUriString(CHANGE_PASS_URL)
-            .queryParam("tokenPayload.userId", 1)
+            .queryParam("tokenPayload.sub", 1)
             .build()
             .toUri();
 
