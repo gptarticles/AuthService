@@ -24,13 +24,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(ProtectedProfileController.class)
 public class ProtectedProfileControllerTest {
-    private final static String CHANGE_PASS_URL = "/protected/profile/changeUsername";
+    private final static String CHANGE_USERNAME_URL = "/protected/profile/changeUsername";
+
+    private final static String CHANGE_PASS_URL = "/protected/profile/changePassword";
+
+    private final static URI CHANGE_USERNAME_URL_FOR_USERID_ONE = UriComponentsBuilder
+            .fromUriString(CHANGE_USERNAME_URL)
+            .queryParam("tokenPayload.sub", 1)
+            .build()
+            .toUri();
 
     private final static URI CHANGE_PASS_URL_FOR_USERID_ONE = UriComponentsBuilder
             .fromUriString(CHANGE_PASS_URL)
             .queryParam("tokenPayload.sub", 1)
             .build()
             .toUri();
+
+    private final static String[] WRONG_SHALLOW_PASSWORDS = {"", "a".repeat(7), "a".repeat(129),
+            "汉".repeat(8), " ".repeat(8)};
+
+    private final static String[] WRONG_EXACT_PASSWORDS = {"", "a".repeat(5) + "A1", "a".repeat(127) + "A1",
+            "汉".repeat(5) + "aA1", " ".repeat(8), "a".repeat(8), "aA".repeat(4),
+            "a1".repeat(4), "A1".repeat(4)};
+
 
     /**
      * Mock MVC object for testing.
@@ -54,7 +70,7 @@ public class ProtectedProfileControllerTest {
         when(jwtService.generateTokens(1, "newname"))
                 .thenReturn(new JwtPairDto("token1", "token2"));
 
-        mockMvc.perform(post(CHANGE_PASS_URL_FOR_USERID_ONE)
+        mockMvc.perform(post(CHANGE_USERNAME_URL_FOR_USERID_ONE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"newUsername\": \"newname\", \"password\": \"Password1!\"}"))
                 .andExpect(status().isOk())
@@ -74,10 +90,11 @@ public class ProtectedProfileControllerTest {
     public void changeUsernameWrongPasswordTest() throws Exception {
         when(userService.isPasswordCorrect(1, "wrongpass")).thenReturn(false);
 
-        mockMvc.perform(post(CHANGE_PASS_URL_FOR_USERID_ONE)
+        mockMvc.perform(post(CHANGE_USERNAME_URL_FOR_USERID_ONE)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"newUsername\": \"newname\", \"password\": \"wrongpass\"}"))
                 .andExpect(status().is(400))
+                .andExpect(jsonPath("$.*", hasSize(1)))
                 .andExpect(jsonPath("$.message").value("The password is incorrect!"));
 
         verify(userService, never()).changeUsername(anyLong(), anyString());
@@ -108,10 +125,7 @@ public class ProtectedProfileControllerTest {
      */
     @Test
     public void changeUsernameIncorrectPassword() throws Exception {
-        String[] wrongPasswords = {"", "a".repeat(7), "a".repeat(129),
-                "汉".repeat(8), " ".repeat(8)};
-
-        for (String password : wrongPasswords) {
+        for (String password : WRONG_SHALLOW_PASSWORDS) {
             String json = "{\"newUsername\": \"newname\", \"password\": \"%s\"}".formatted(password);
             testChangeUsernameWithInvalidJson(json, "password",
                     "Password is incorrect!");
@@ -135,8 +149,80 @@ public class ProtectedProfileControllerTest {
         verify(userService, never()).isPasswordCorrect(anyLong(), anyString());
     }
 
-    private void testChangeUsernameWithInvalidJson(String json, String expectErrorField, String expectedErrorMsg) throws Exception {
+    @Test
+    public void changePasswordTest() throws Exception {
+        when(userService.isPasswordCorrect(1L, "Password1!")).thenReturn(true);
+        when(userService.getUsername(1L)).thenReturn("test");
+        when(jwtService.generateTokens(1L, "test")).thenReturn(new JwtPairDto("token1", "token2"));
+
         mockMvc.perform(post(CHANGE_PASS_URL_FOR_USERID_ONE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newPassword\": \"newPassword1\", \"oldPassword\": \"Password1!\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(2)))
+                .andExpect(jsonPath("$.accessToken").value("token1"))
+                .andExpect(jsonPath("$.refreshToken").value("token2"));
+
+        verify(userService, times(1)).isPasswordCorrect(1, "Password1!");
+        verify(userService, times(1)).changePassword(1, "newPassword1");
+    }
+
+    @Test
+    public void changePasswordWithIncorrectOldOne() throws Exception {
+        when(userService.isPasswordCorrect(1, "Password1!")).thenReturn(false);
+
+        mockMvc.perform(post(CHANGE_PASS_URL_FOR_USERID_ONE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"newPassword\": \"newPassword1\", \"oldPassword\": \"Password1!\"}"))
+                .andExpect(status().is(400))
+                .andExpect(jsonPath("$.*", hasSize(1)))
+                .andExpect(jsonPath("$.message").value("The password is incorrect!"));
+
+        verify(userService, never()).changePassword(anyLong(), anyString());
+    }
+
+    @Test
+    public void changePasswordToNull() throws Exception {
+        String json = "{\"newPassword\": null, \"oldPassword\": \"Password1\"}";
+        testChangePasswordWithInvalidJson(json, "newPassword", "New password can't be null!");
+        verify(userService, never()).isPasswordCorrect(anyLong(), anyString());
+    }
+
+    @Test
+    public void changeNullPassword() throws Exception {
+        String json = "{\"newPassword\": \"Password1\", \"oldPassword\": null}";
+        testChangePasswordWithInvalidJson(json, "oldPassword", "Old password can't be null!");
+        verify(userService, never()).isPasswordCorrect(anyLong(), anyString());
+    }
+
+    @Test
+    public void changePasswordToIncorrectOne() throws Exception {
+        for (String newPassword : WRONG_EXACT_PASSWORDS) {
+            String json = "{\"newPassword\": \"%s\", \"oldPassword\": \"Password1\"}".formatted(newPassword);
+            testChangePasswordWithInvalidJson(json, "newPassword", "Password does not meet the requirements!");
+        }
+        verify(userService, never()).isPasswordCorrect(anyLong(), anyString());
+    }
+
+    @Test
+    public void changeIncorrectPassword() throws Exception {
+        for (String oldPassword : WRONG_SHALLOW_PASSWORDS) {
+            String json = "{\"newPassword\": \"Password1\", \"oldPassword\": \"%s\"}".formatted(oldPassword);
+            testChangePasswordWithInvalidJson(json, "oldPassword", "Password is incorrect!");
+        }
+        verify(userService, never()).isPasswordCorrect(anyLong(), anyString());
+    }
+
+    private void testChangeUsernameWithInvalidJson(String json, String expectErrorField, String expectedErrorMsg) throws Exception {
+        testPostWithInvalidJson(CHANGE_USERNAME_URL_FOR_USERID_ONE, json, expectErrorField, expectedErrorMsg);
+    }
+
+    private void testChangePasswordWithInvalidJson(String json, String expectErrorField, String expectedErrorMsg) throws Exception {
+        testPostWithInvalidJson(CHANGE_PASS_URL_FOR_USERID_ONE, json, expectErrorField, expectedErrorMsg);
+    }
+
+    private void testPostWithInvalidJson(URI uri, String json, String expectErrorField, String expectedErrorMsg) throws Exception {
+        mockMvc.perform(post(uri)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().is(400))

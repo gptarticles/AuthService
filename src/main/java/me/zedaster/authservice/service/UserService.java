@@ -136,4 +136,22 @@ public class UserService {
         user.setUsername(newUsername);
         userRepository.save(user);
     }
+
+    /**
+     * Changes the password of the user
+     * @param userId ID of the user
+     * @param newPassword New valid password
+     */
+    @Transactional
+    public void changePassword(long userId, String newPassword) {
+        if (userId <= 0) {
+            throw UserIdException.newIncorrectException();
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> UserIdException.newNotFoundException(userId));
+        String newHash = passwordEncoder.encode(newPassword);
+        user.setPassword(newHash);
+        userRepository.save(user);
+    }
 }

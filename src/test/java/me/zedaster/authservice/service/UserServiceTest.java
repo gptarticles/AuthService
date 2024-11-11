@@ -133,7 +133,6 @@ public class UserServiceTest {
         userService.changeUsername(1L, "newname");
 
         verify(userRepository, times(1)).existsByUsername("newname");
-        verify(userRepository, times(1)).findById(1L);
         verify(fakeUser, times(1)).setUsername("newname");
         verify(userRepository, times(1)).save(same(fakeUser));
     }
@@ -142,7 +141,7 @@ public class UserServiceTest {
      * Test for changing the username if the new username is already taken.
      */
     @Test
-    public void changeUsernameTaken() throws Exception {
+    public void changeUsernameTaken()  {
         when(userRepository.existsByUsername("newname")).thenReturn(true);
 
         ProfileException ex = assertThrows(ProfileException.class,
@@ -173,6 +172,46 @@ public class UserServiceTest {
 
         UserIdException ex = assertThrows(UserIdException.class,
                 () -> userService.changeUsername(100L, "newname"));
+        assertEquals("User with ID 100 not found!", ex.getMessage());
+
+        verify(userRepository, never()).save(any());
+    }
+
+    /**
+     * Test for successful changing of the password
+     */
+    @Test
+    public void changePassword() {
+        User fakeUser = mock(User.class);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeUser));
+        when(passwordEncoder.encode("NewPassword1")).thenReturn("NewHash");
+
+        userService.changePassword(1L, "NewPassword1");
+
+        verify(fakeUser, times(1)).setPassword("NewHash");
+        verify(userRepository, times(1)).save(same(fakeUser));
+    }
+
+    /**
+     * Test for changing the password with incorrect user ID.
+     */
+    @Test
+    public void changePasswordIncorrectUserId() {
+        UserIdException ex = assertThrows(UserIdException.class,
+                () -> userService.changePassword(0L, "NewPassword1"));
+        assertEquals("The user ID is incorrect!", ex.getMessage());
+        verify(userRepository, never()).findById(anyLong());
+    }
+
+    /**
+     * Test for changing the password with non-existent user ID.
+     */
+    @Test
+    public void changePasswordNonExistentUserId() {
+        when(userRepository.findById(100L)).thenReturn(Optional.empty());
+
+        UserIdException ex = assertThrows(UserIdException.class,
+                () -> userService.changePassword(100L, "NewPassword1"));
         assertEquals("User with ID 100 not found!", ex.getMessage());
 
         verify(userRepository, never()).save(any());
