@@ -1,11 +1,10 @@
 package me.zedaster.authservice.controller;
 
 import lombok.RequiredArgsConstructor;
-import me.zedaster.authservice.dto.profile.UsernameDto;
 import me.zedaster.authservice.service.UserService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * Profile REST controller for methods for internal use
@@ -19,8 +18,23 @@ public class InternalProfileController {
      */
     private final UserService userService;
 
-    @GetMapping("/username")
-    public UsernameDto getUsernameById(long userId) {
-        return new UsernameDto(userService.getUsername(userId));
+    /**
+     * Returns username by user ID.
+     * @param userId User ID.
+     * @return JSON object with username.
+     */
+    @GetMapping("/{id}/username")
+    public String getUsernameById(@PathVariable("id") Long userId) {
+        return userService.getUsername(userId);
+    }
+
+    /**
+     * Returns usernames by user IDs.
+     * @param userIds List of user IDs.
+     * @return List of JSON objects with username.
+     */
+    @GetMapping("/usernames")
+    public List<String> getUsernamesByIds(@RequestParam("ids") List<Long> userIds) {
+        return userService.getUsernames(userIds);
     }
 }

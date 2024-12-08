@@ -10,8 +10,10 @@ import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.repository.UserRepository;
 import me.zedaster.authservice.service.encoder.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -64,7 +66,7 @@ public class UserService {
      * @param credentials Credentials of the user
      * @return User or empty optional if user with these credentials doesn't exist
      */
-    @Transactional
+    @Transactional(propagation = Propagation.SUPPORTS)
     public Optional<User> getUser(UserCredentialsDto credentials) {
         String usernameOrEmail = credentials.getUsernameOrEmail();
         String rawPassword = credentials.getPassword();
@@ -86,10 +88,10 @@ public class UserService {
      * @param userId ID of the user
      * @return username of the user
      */
-    @Transactional
+    @Transactional(propagation = Propagation.SUPPORTS)
     public String getUsername(long userId) {
         if (userId <= 0) {
-            throw UserIdException.newIncorrectException();
+            throw UserIdException.newIncorrectException(userId);
         }
 
         User user = userRepository.findById(userId)
@@ -98,12 +100,32 @@ public class UserService {
     }
 
     /**
+     * Returns usernames of users by their IDs
+     * @param userIds IDs of the users
+     * @return List of usernames
+     */
+    @Transactional(propagation = Propagation.SUPPORTS)
+    public List<String> getUsernames(List<Long> userIds) {
+        for (long userId : userIds) {
+            if (userId <= 0) {
+                throw UserIdException.newIncorrectException(userId);
+            }
+        }
+
+        List<String> result = userRepository.findAllUsernamesById(userIds);
+        if (result.size() != userIds.size()) {
+            throw UserIdException.newManyNotFoundException();
+        }
+        return result;
+    }
+
+    /**
      * Checks if the password belongs to the user with specified id
      * @param userId ID of the user
      * @param rawPassword Password to check
      * @return True if it is the right password of the user
      */
-    @Transactional
+    @Transactional(propagation = Propagation.SUPPORTS)
     public boolean isPasswordCorrect(long userId, String rawPassword) {
         Optional<User> optionalUser = userRepository.findById(userId);
         if (optionalUser.isEmpty()) {
@@ -123,7 +145,7 @@ public class UserService {
     @Transactional
     public void changeUsername(long userId, String newUsername) throws ProfileException {
         if (userId <= 0) {
-            throw UserIdException.newIncorrectException();
+            throw UserIdException.newIncorrectException(userId);
         }
 
         boolean isUsernameTaken = userRepository.existsByUsername(newUsername);
@@ -145,7 +167,7 @@ public class UserService {
     @Transactional
     public void changePassword(long userId, String newPassword) {
         if (userId <= 0) {
-            throw UserIdException.newIncorrectException();
+            throw UserIdException.newIncorrectException(userId);
         }
 
         User user = userRepository.findById(userId)

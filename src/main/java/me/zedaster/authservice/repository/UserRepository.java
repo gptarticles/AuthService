@@ -1,9 +1,11 @@
 package me.zedaster.authservice.repository;
 
 import me.zedaster.authservice.model.User;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -20,13 +22,6 @@ public interface UserRepository extends CrudRepository<User, Long> {
     Optional<User> findByUsernameOrEmail(String username, String email);
 
     /**
-     * Find a user by username.
-     * @param username Username.
-     * @return User with the given username.
-     */
-    Optional<User> findByUsername(String username);
-
-    /**
      * Checks if user with the given username exists.
      * @param username Username to check.
      * @return True if user with the given username exists, false otherwise.
@@ -39,4 +34,12 @@ public interface UserRepository extends CrudRepository<User, Long> {
      * @return True if user with the given email exists, false otherwise.
      */
     boolean existsByEmail(String email);
+
+    /**
+     * Finds all usernames by user IDs.
+     * @param ids User IDs.
+     * @return List of usernames.
+     */
+    @Query("SELECT u.username FROM User u WHERE u.id IN :ids")
+    List<String> findAllUsernamesById(Iterable<Long> ids);
 }

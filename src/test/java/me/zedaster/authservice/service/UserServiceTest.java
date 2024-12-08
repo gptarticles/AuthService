@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -104,7 +105,7 @@ public class UserServiceTest {
     public void getUsernameByIncorrectId() {
         UserIdException ex = assertThrows(UserIdException.class,
                 () -> userService.getUsername(0L));
-        assertEquals("The user ID is incorrect!", ex.getMessage());
+        assertEquals("User ID 0 is incorrect!", ex.getMessage());
         verify(userRepository, never()).findById(anyLong());
     }
 
@@ -118,6 +119,40 @@ public class UserServiceTest {
         UserIdException ex = assertThrows(UserIdException.class, () ->
                 userService.getUsername(100L));
         assertEquals("User with ID 100 not found!", ex.getMessage());
+    }
+
+    /**
+     * Test for getting usernames by right userIds
+     */
+    @Test
+    public void getUsernamesByRightIds() {
+        when(userRepository.findAllUsernamesById(List.of(1L, 2L))).thenReturn(List.of("barbra.streisand", "john.doe"));
+
+        List<String> usernames = userService.getUsernames(List.of(1L, 2L));
+        assertEquals(List.of("barbra.streisand", "john.doe"), usernames);
+    }
+
+    /**
+     * Test for getting usernames by userIds with incorrect one
+     */
+    @Test
+    public void getUsernamesByIdsWithIncorrectOne() {
+        UserIdException ex = assertThrows(UserIdException.class,
+                () -> userService.getUsernames(List.of(2L, 0L)));
+        assertEquals("User ID 0 is incorrect!", ex.getMessage());
+        verify(userRepository, never()).findAllUsernamesById(any());
+    }
+
+    /**
+     * Test for getting usernames by userIds with non-existent one
+     */
+    @Test
+    public void getUsernamesByIdsWithNonExistentOne() {
+        when(userRepository.findAllUsernamesById(List.of(100L, 200L))).thenReturn(List.of("barbra.streisand"));
+
+        UserIdException ex = assertThrows(UserIdException.class,
+                () -> userService.getUsernames(List.of(100L, 200L)));
+        assertEquals("Some users not found!", ex.getMessage());
     }
 
 
@@ -158,7 +193,7 @@ public class UserServiceTest {
     public void changeUsernameIncorrectUserId() {
         UserIdException ex = assertThrows(UserIdException.class,
                 () -> userService.changeUsername(0L, "newname"));
-        assertEquals("The user ID is incorrect!", ex.getMessage());
+        assertEquals("User ID 0 is incorrect!", ex.getMessage());
         verify(userRepository, never()).existsByUsername(anyString());
     }
 
@@ -199,7 +234,7 @@ public class UserServiceTest {
     public void changePasswordIncorrectUserId() {
         UserIdException ex = assertThrows(UserIdException.class,
                 () -> userService.changePassword(0L, "NewPassword1"));
-        assertEquals("The user ID is incorrect!", ex.getMessage());
+        assertEquals("User ID 0 is incorrect!", ex.getMessage());
         verify(userRepository, never()).findById(anyLong());
     }
 
