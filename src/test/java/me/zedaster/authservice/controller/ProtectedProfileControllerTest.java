@@ -2,6 +2,7 @@ package me.zedaster.authservice.controller;
 
 import me.zedaster.authservice.dto.TokenPayload;
 import me.zedaster.authservice.dto.auth.JwtPairDto;
+import me.zedaster.authservice.model.Role;
 import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.service.JwtService;
 import me.zedaster.authservice.service.UserService;
@@ -14,9 +15,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -65,6 +68,36 @@ public class ProtectedProfileControllerTest {
 
     @MockBean
     private UserService userService;
+
+    /**
+     * Test for getting the profile.
+     * @throws Exception If something goes wrong.
+     */
+    @Test
+    public void getProfileTest() throws Exception {
+        when(userService.getUser(1)).thenReturn(Optional.of(new User(1L, "test", "test@mail.com", Role.USER)));
+
+        mockMvc.perform(get("/protected/profile?tokenPayload.sub=1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(4)))
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.username").value("test"))
+                .andExpect(jsonPath("$.email").value("test@mail.com"));
+    }
+
+    /**
+     * Test for getting non-existent profile.
+     */
+    @Test
+    public void getNonExistentProfile() throws Exception {
+        when(userService.getUser(1)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/protected/profile?tokenPayload.sub=1"))
+                .andExpect(status().is(400))
+                .andExpect(jsonPath("$.*", hasSize(1)))
+                .andExpect(jsonPath("$.message").value("User with ID 1 not found!"));
+    }
+
 
     /**
      * Test for changing the username.

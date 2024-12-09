@@ -67,6 +67,26 @@ public class UserService {
     }
 
     /**
+     * Finds a user by its ID
+     * @param userId ID of the user
+     * @return User or empty optional if user with this ID doesn't exist
+     */
+    public Optional<User> getUser(long userId) {
+        if (userId <= 0) {
+            throw UserIdException.newIncorrectException(userId);
+        }
+
+        Optional<UserEntity> optionalEntity = userRepository.findById(userId);
+        if (optionalEntity.isEmpty()) {
+            return Optional.empty();
+        }
+
+        UserEntity userEntity = optionalEntity.get();
+        Role role = getRole(userEntity);
+        return Optional.of(User.fromEntityAndRole(userEntity, role));
+    }
+
+    /**
      * Finds a user with specified credentials
      * @param credentials Credentials of the user
      * @return User or empty optional if user with these credentials doesn't exist

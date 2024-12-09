@@ -8,7 +8,9 @@ import me.zedaster.authservice.dto.profile.ChangePasswordDto;
 import me.zedaster.authservice.dto.profile.ChangeUsernameDto;
 import me.zedaster.authservice.exception.AuthException;
 import me.zedaster.authservice.exception.ProfileException;
+import me.zedaster.authservice.exception.UserIdException;
 import me.zedaster.authservice.model.Role;
+import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.service.JwtService;
 import me.zedaster.authservice.service.UserService;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,12 @@ public class ProtectedProfileController {
      * Utils for working with JWT token.
      */
     private final JwtService jwtService;
+
+    @GetMapping("")
+    public User getUserProfile(@RequestParam("tokenPayload.sub") String sub) {
+        long userId = Long.parseLong(sub);
+        return userService.getUser(userId).orElseThrow(() -> UserIdException.newNotFoundException(userId));
+    }
 
     @PostMapping("/changeUsername")
     @Transactional

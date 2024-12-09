@@ -20,7 +20,7 @@ public class User {
 
     private final Role role;
 
-    private User(long id, String username, String email, Role role) {
+    public User(long id, String username, String email, Role role) {
         this.id = id;
         this.username = username;
         this.email = email;

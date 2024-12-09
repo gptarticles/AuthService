@@ -116,6 +116,70 @@ public class UserServiceTest {
     }
 
     /**
+     * Test for getting user with default role by right ID
+     */
+    @Test
+    public void getExistingUserWithDefaultRoleById() {
+        UserEntity fakeEntity = mock(UserEntity.class);
+        when(fakeEntity.getId()).thenReturn(1L);
+        when(fakeEntity.getUsername()).thenReturn("user");
+        when(fakeEntity.getPassword()).thenReturn("encryptedPass");
+        when(fakeEntity.getEmail()).thenReturn("user@mail.com");
+        when(fakeEntity.getRole()).thenReturn(null);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeEntity));
+
+        Optional<User> user = userService.getUser(1L);
+        Assertions.assertTrue(user.isPresent());
+        assertEquals(1L, user.get().getId());
+        assertEquals("user", user.get().getUsername());
+        assertEquals("user@mail.com", user.get().getEmail());
+        assertEquals(Role.USER, user.get().getRole());
+    }
+
+    /**
+     * Test for getting user with custom role by right ID
+     */
+    @Test
+    public void getExistingUserWithCustomRoleById() {
+        UserEntity fakeEntity = mock(UserEntity.class);
+        when(fakeEntity.getId()).thenReturn(1L);
+        when(fakeEntity.getUsername()).thenReturn("user");
+        when(fakeEntity.getPassword()).thenReturn("encryptedPass");
+        when(fakeEntity.getEmail()).thenReturn("user@mail.com");
+        when(fakeEntity.getRole()).thenReturn(new UserRoleEntity(1L, Role.MODERATOR));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeEntity));
+
+        Optional<User> user = userService.getUser(1L);
+        Assertions.assertTrue(user.isPresent());
+        assertEquals(1L, user.get().getId());
+        assertEquals("user", user.get().getUsername());
+        assertEquals("user@mail.com", user.get().getEmail());
+        assertEquals(Role.MODERATOR, user.get().getRole());
+    }
+
+    /**
+     * Test for getting user by incorrect ID
+     */
+    @Test
+    public void getUserByIncorrectId() {
+        UserIdException ex = assertThrows(UserIdException.class,
+                () -> userService.getUser(0L));
+        assertEquals("User ID 0 is incorrect!", ex.getMessage());
+        verify(userRepository, never()).findById(anyLong());
+    }
+
+    /**
+     * Test for getting user by ID that doesn't exist
+     */
+    @Test
+    public void getUserByNonExistentId() {
+        when(userRepository.findById(100L)).thenReturn(Optional.empty());
+
+        Optional<User> user = userService.getUser(100L);
+        Assertions.assertTrue(user.isEmpty());
+    }
+
+    /**
      * Test for getting username by right userId
      */
     @Test
