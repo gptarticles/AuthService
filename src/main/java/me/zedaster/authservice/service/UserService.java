@@ -3,9 +3,12 @@ package me.zedaster.authservice.service;
 import lombok.AllArgsConstructor;
 import me.zedaster.authservice.dto.auth.NewUserDto;
 import me.zedaster.authservice.dto.auth.UserCredentialsDto;
+import me.zedaster.authservice.entity.UserEntity;
+import me.zedaster.authservice.entity.UserRoleEntity;
 import me.zedaster.authservice.exception.AuthException;
 import me.zedaster.authservice.exception.ProfileException;
 import me.zedaster.authservice.exception.UserIdException;
+import me.zedaster.authservice.model.Role;
 import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.repository.UserRepository;
 import me.zedaster.authservice.service.encoder.PasswordEncoder;
@@ -53,12 +56,14 @@ public class UserService {
             throw new AuthException("User with the same email already exists!");
         }
 
-        User user = User.builder()
+        UserEntity userEntity = UserEntity.builder()
                 .username(username)
                 .password(passwordEncoder.encode(password))
                 .email(email)
                 .build();
-        return userRepository.save(user);
+        userRepository.save(userEntity);
+
+        return User.fromEntityAndRole(userEntity, Role.USER);
     }
 
     /**
@@ -70,17 +75,19 @@ public class UserService {
     public Optional<User> getUser(UserCredentialsDto credentials) {
         String usernameOrEmail = credentials.getUsernameOrEmail();
         String rawPassword = credentials.getPassword();
-        Optional<User> optionalUser = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);
-        if (optionalUser.isEmpty()) {
+        Optional<UserEntity> optionalEntity = userRepository.findByUsernameOrEmail(usernameOrEmail, usernameOrEmail);
+        if (optionalEntity.isEmpty()) {
             return Optional.empty();
         }
+        UserEntity userEntity = optionalEntity.get();
 
-        String encryptedPassword = optionalUser.get().getPassword();
+        String encryptedPassword = userEntity.getPassword();
         if (!passwordEncoder.matches(rawPassword, encryptedPassword)) {
             return Optional.empty();
         }
 
-        return optionalUser;
+        Role role = getRole(userEntity);
+        return Optional.of(User.fromEntityAndRole(userEntity, role));
     }
 
     /**
@@ -94,9 +101,9 @@ public class UserService {
             throw UserIdException.newIncorrectException(userId);
         }
 
-        User user = userRepository.findById(userId)
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> UserIdException.newNotFoundException(userId));
-        return user.getUsername();
+        return userEntity.getUsername();
     }
 
     /**
@@ -127,12 +134,12 @@ public class UserService {
      */
     @Transactional(propagation = Propagation.SUPPORTS)
     public boolean isPasswordCorrect(long userId, String rawPassword) {
-        Optional<User> optionalUser = userRepository.findById(userId);
-        if (optionalUser.isEmpty()) {
+        Optional<UserEntity> optionalEntity = userRepository.findById(userId);
+        if (optionalEntity.isEmpty()) {
             return false;
         }
 
-        String encryptedPassword = optionalUser.get().getPassword();
+        String encryptedPassword = optionalEntity.get().getPassword();
         return passwordEncoder.matches(rawPassword, encryptedPassword);
     }
 
@@ -153,10 +160,10 @@ public class UserService {
             throw new ProfileException("The username is already taken!");
         }
 
-        User user = userRepository.findById(userId)
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> UserIdException.newNotFoundException(userId));
-        user.setUsername(newUsername);
-        userRepository.save(user);
+        userEntity.setUsername(newUsername);
+        userRepository.save(userEntity);
     }
 
     /**
@@ -170,10 +177,23 @@ public class UserService {
             throw UserIdException.newIncorrectException(userId);
         }
 
-        User user = userRepository.findById(userId)
+        UserEntity userEntity = userRepository.findById(userId)
                 .orElseThrow(() -> UserIdException.newNotFoundException(userId));
         String newHash = passwordEncoder.encode(newPassword);
-        user.setPassword(newHash);
-        userRepository.save(user);
+        userEntity.setPassword(newHash);
+        userRepository.save(userEntity);
+    }
+
+    /**
+     * Gets the role of the user
+     * @param userEntity User entity
+     * @return Role of the user
+     */
+    private Role getRole(UserEntity userEntity) {
+        UserRoleEntity userRoleEntity = userEntity.getRole();
+        if (userRoleEntity == null) {
+            return Role.USER;
+        }
+        return userRoleEntity.getRole();
     }
 }

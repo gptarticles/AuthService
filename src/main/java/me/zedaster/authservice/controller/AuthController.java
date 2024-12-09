@@ -41,7 +41,7 @@ public class AuthController {
     @PostMapping("/register")
     public JwtPairDto register(@Valid @RequestBody NewUserDto registerDto) throws AuthException {
         User user = userService.createUser(registerDto);
-        return jwtService.generateTokens(user.getId(), user.getUsername());
+        return jwtService.generateTokens(user);
     }
 
     /**
@@ -55,7 +55,7 @@ public class AuthController {
         if (user.isEmpty()) {
             throw AuthException.newInvalidCredentialsException();
         }
-        return jwtService.generateTokens(user.get().getId(), user.get().getUsername());
+        return jwtService.generateTokens(user.get());
     }
 
     /**

@@ -4,8 +4,11 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import me.zedaster.authservice.dto.TokenPayload;
 import me.zedaster.authservice.dto.auth.JwtPairDto;
 import me.zedaster.authservice.exception.JwtException;
+import me.zedaster.authservice.model.Role;
+import me.zedaster.authservice.model.User;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -39,7 +42,7 @@ public class JwtService {
 
     public JwtService(@Value("${jwt.secret.access}") String accessTokenSecret,
                       @Value("${jwt.secret.refresh}") String refreshTokenSecret) {
-        this.accessSecretKey = getSecretKey(accessTokenSecret);;
+        this.accessSecretKey = getSecretKey(accessTokenSecret);
         this.refreshSecretKey = getSecretKey(refreshTokenSecret);
     }
 
@@ -63,22 +66,33 @@ public class JwtService {
 
     /**
      * Generate a pair of JWT access and refresh tokens.
-     * @param userId User ID.
-     * @param username Username.
+     * @param user User for whom the tokens are generated.
      * @return Pair of JWT access and refresh tokens.
      */
-    public JwtPairDto generateTokens(long userId, String username) {
+    public JwtPairDto generateTokens(User user) {
+        TokenPayload payload = new TokenPayload(user.getId(), user.getUsername(), user.getRole());
+        return generateTokens(payload);
+    }
+
+    /**
+     * Generate a pair of JWT access and refresh tokens.
+     * @param payload Payload of the tokens.
+     * @return Pair of JWT access and refresh tokens.
+     */
+    public JwtPairDto generateTokens(TokenPayload payload) {
         String accessToken = Jwts.builder()
-                .claim("sub", String.valueOf(userId))
-                .claim("username", username)
+                .claim("sub", String.valueOf(payload.getUserId()))
+                .claim("username", payload.getUsername())
+                .claim("role", payload.getRole().name())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_LIFETIME))
                 .signWith(accessSecretKey)
                 .compact();
 
         String refreshToken = Jwts.builder()
-                .claim("sub", String.valueOf(userId))
-                .claim("username", username)
+                .claim("sub", String.valueOf(payload.getUserId()))
+                .claim("username", payload.getUsername())
+                .claim("role", payload.getRole().name())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_LIFETIME))
                 .signWith(refreshSecretKey)
@@ -94,8 +108,7 @@ public class JwtService {
      * @throws JwtException If the refresh token is invalid.
      */
     public JwtPairDto refreshToken(String refreshToken) throws JwtException {
-        long userId;
-        String username;
+        TokenPayload tokenPayload;
 
         try {
             Claims claims = Jwts
@@ -104,13 +117,15 @@ public class JwtService {
                     .build()
                     .parseSignedClaims(refreshToken)
                     .getPayload();
-            userId = Long.parseLong(claims.get("sub", String.class));
-            username = claims.get("username", String.class);
+            long sub = Long.parseLong(claims.get("sub", String.class));
+            String username = claims.get("username", String.class);
+            Role role = Role.valueOf(claims.get("role", String.class));
+            tokenPayload = new TokenPayload(sub, username, role);
         } catch (io.jsonwebtoken.JwtException e) {
             throw new JwtException("The refresh token is invalid!");
         }
 
-        return generateTokens(userId, username);
+        return generateTokens(tokenPayload);
     }
 
     /**

@@ -1,6 +1,8 @@
 package me.zedaster.authservice.controller;
 
+import me.zedaster.authservice.dto.TokenPayload;
 import me.zedaster.authservice.dto.auth.JwtPairDto;
+import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.service.JwtService;
 import me.zedaster.authservice.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -31,12 +33,16 @@ public class ProtectedProfileControllerTest {
     private final static URI CHANGE_USERNAME_URL_FOR_USERID_ONE = UriComponentsBuilder
             .fromUriString(CHANGE_USERNAME_URL)
             .queryParam("tokenPayload.sub", 1)
+            .queryParam("tokenPayload.username", "test")
+            .queryParam("tokenPayload.role", "USER")
             .build()
             .toUri();
 
     private final static URI CHANGE_PASS_URL_FOR_USERID_ONE = UriComponentsBuilder
             .fromUriString(CHANGE_PASS_URL)
             .queryParam("tokenPayload.sub", 1)
+            .queryParam("tokenPayload.username", "test")
+            .queryParam("tokenPayload.role", "USER")
             .build()
             .toUri();
 
@@ -67,7 +73,7 @@ public class ProtectedProfileControllerTest {
     @Test
     public void changeUsernameTest() throws Exception {
         when(userService.isPasswordCorrect(1, "Password1!")).thenReturn(true);
-        when(jwtService.generateTokens(1, "newname"))
+        when(jwtService.generateTokens(any(TokenPayload.class)))
                 .thenReturn(new JwtPairDto("token1", "token2"));
 
         mockMvc.perform(post(CHANGE_USERNAME_URL_FOR_USERID_ONE)
@@ -80,6 +86,9 @@ public class ProtectedProfileControllerTest {
 
         verify(userService, times(1)).isPasswordCorrect(1, "Password1!");
         verify(userService, times(1)).changeUsername(1, "newname");
+        verify(jwtService, times(1)).generateTokens((TokenPayload) argThat(payload ->
+                ((TokenPayload) payload).getUserId() == 1 &&
+                ((TokenPayload) payload).getUsername().equals("newname")));
     }
 
     /**
@@ -98,7 +107,8 @@ public class ProtectedProfileControllerTest {
                 .andExpect(jsonPath("$.message").value("The password is incorrect!"));
 
         verify(userService, never()).changeUsername(anyLong(), anyString());
-        verify(jwtService, never()).generateTokens(anyLong(), anyString());
+        verify(jwtService, never()).generateTokens(any(TokenPayload.class));
+        verify(jwtService, never()).generateTokens(any(User.class));
     }
 
     /**
@@ -153,7 +163,8 @@ public class ProtectedProfileControllerTest {
     public void changePasswordTest() throws Exception {
         when(userService.isPasswordCorrect(1L, "Password1!")).thenReturn(true);
         when(userService.getUsername(1L)).thenReturn("test");
-        when(jwtService.generateTokens(1L, "test")).thenReturn(new JwtPairDto("token1", "token2"));
+        when(jwtService.generateTokens(any(TokenPayload.class)))
+                .thenReturn(new JwtPairDto("token1", "token2"));
 
         mockMvc.perform(post(CHANGE_PASS_URL_FOR_USERID_ONE)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -165,6 +176,9 @@ public class ProtectedProfileControllerTest {
 
         verify(userService, times(1)).isPasswordCorrect(1, "Password1!");
         verify(userService, times(1)).changePassword(1, "newPassword1");
+        verify(jwtService, times(1)).generateTokens((TokenPayload) argThat(payload ->
+                ((TokenPayload) payload).getUserId() == 1 &&
+                ((TokenPayload) payload).getUsername().equals("test")));
     }
 
     @Test

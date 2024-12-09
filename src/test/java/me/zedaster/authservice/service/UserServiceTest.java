@@ -1,8 +1,11 @@
 package me.zedaster.authservice.service;
 
 import me.zedaster.authservice.dto.auth.UserCredentialsDto;
+import me.zedaster.authservice.entity.UserEntity;
+import me.zedaster.authservice.entity.UserRoleEntity;
 import me.zedaster.authservice.exception.ProfileException;
 import me.zedaster.authservice.exception.UserIdException;
+import me.zedaster.authservice.model.Role;
 import me.zedaster.authservice.model.User;
 import me.zedaster.authservice.repository.UserRepository;
 import me.zedaster.authservice.service.encoder.PasswordEncoder;
@@ -40,16 +43,43 @@ public class UserServiceTest {
      */
     @Test
     public void getExistingUserWithRightPassword() {
-        User fakeUser = mock(User.class);
-        when(fakeUser.getId()).thenReturn(1L);
-        when(fakeUser.getUsername()).thenReturn("user");
-        when(fakeUser.getPassword()).thenReturn("encryptedPass");
-        when(userRepository.findByUsernameOrEmail("user", "user")).thenReturn(Optional.of(fakeUser));
+        UserEntity fakeEntity = mock(UserEntity.class);
+        when(fakeEntity.getId()).thenReturn(1L);
+        when(fakeEntity.getUsername()).thenReturn("user");
+        when(fakeEntity.getPassword()).thenReturn("encryptedPass");
+        when(fakeEntity.getEmail()).thenReturn("user@mail.com");
+        when(fakeEntity.getRole()).thenReturn(null);
+        when(userRepository.findByUsernameOrEmail("user", "user")).thenReturn(Optional.of(fakeEntity));
         when(passwordEncoder.matches("rawPass", "encryptedPass")).thenReturn(true);
 
         Optional<User> user = userService.getUser(new UserCredentialsDto("user", "rawPass"));
         Assertions.assertTrue(user.isPresent());
-        Assertions.assertSame(fakeUser, user.get());
+        assertEquals(1L, user.get().getId());
+        assertEquals("user", user.get().getUsername());
+        assertEquals("user@mail.com", user.get().getEmail());
+        assertEquals(Role.USER, user.get().getRole());
+    }
+
+    /**
+     * Test for getting user with right credentials and non-default role
+     */
+    @Test
+    public void getExistingUserWithCustomRole() {
+        UserEntity fakeEntity = mock(UserEntity.class);
+        when(fakeEntity.getId()).thenReturn(1L);
+        when(fakeEntity.getUsername()).thenReturn("moder");
+        when(fakeEntity.getPassword()).thenReturn("encryptedPass");
+        when(fakeEntity.getEmail()).thenReturn("moder@mail.com");
+        when(fakeEntity.getRole()).thenReturn(new UserRoleEntity(1L, Role.MODERATOR));
+        when(userRepository.findByUsernameOrEmail("moder", "moder")).thenReturn(Optional.of(fakeEntity));
+        when(passwordEncoder.matches("rawPass", "encryptedPass")).thenReturn(true);
+
+        Optional<User> user = userService.getUser(new UserCredentialsDto("moder", "rawPass"));
+        Assertions.assertTrue(user.isPresent());
+        assertEquals(1L, user.get().getId());
+        assertEquals("moder", user.get().getUsername());
+        assertEquals("moder@mail.com", user.get().getEmail());
+        assertEquals(Role.MODERATOR, user.get().getRole());
     }
 
     /**
@@ -57,11 +87,11 @@ public class UserServiceTest {
      */
     @Test
     public void getExistentUserWithWrongPassword() {
-        User fakeUser = mock(User.class);
-        when(fakeUser.getId()).thenReturn(1L);
-        when(fakeUser.getUsername()).thenReturn("user");
-        when(fakeUser.getPassword()).thenReturn("encryptedPass");
-        when(userRepository.findByUsernameOrEmail("user", "user")).thenReturn(Optional.of(fakeUser));
+        UserEntity fakeEntity = mock(UserEntity.class);
+        when(fakeEntity.getId()).thenReturn(1L);
+        when(fakeEntity.getUsername()).thenReturn("user");
+        when(fakeEntity.getPassword()).thenReturn("encryptedPass");
+        when(userRepository.findByUsernameOrEmail("user", "user")).thenReturn(Optional.of(fakeEntity));
         when(passwordEncoder.matches("wrongPass", "encryptedPass")).thenReturn(false);
 
         Optional<User> user = userService.getUser(new UserCredentialsDto("user", "wrongPass"));
@@ -90,9 +120,9 @@ public class UserServiceTest {
      */
     @Test
     public void getUsernameByRightId() {
-        User fakeUser = mock(User.class);
-        when(fakeUser.getUsername()).thenReturn("barbra.streisand");
-        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeUser));
+        UserEntity fakeEntity = mock(UserEntity.class);
+        when(fakeEntity.getUsername()).thenReturn("barbra.streisand");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeEntity));
 
         String username = userService.getUsername(1L);
         assertEquals("barbra.streisand", username);
@@ -162,14 +192,14 @@ public class UserServiceTest {
     @Test
     public void changeUsername() throws Exception {
         when(userRepository.existsByUsername("newname")).thenReturn(false);
-        User fakeUser = mock(User.class);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeUser));
+        UserEntity fakeEntity = mock(UserEntity.class);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeEntity));
 
         userService.changeUsername(1L, "newname");
 
         verify(userRepository, times(1)).existsByUsername("newname");
-        verify(fakeUser, times(1)).setUsername("newname");
-        verify(userRepository, times(1)).save(same(fakeUser));
+        verify(fakeEntity, times(1)).setUsername("newname");
+        verify(userRepository, times(1)).save(same(fakeEntity));
     }
 
     /**
@@ -217,14 +247,14 @@ public class UserServiceTest {
      */
     @Test
     public void changePassword() {
-        User fakeUser = mock(User.class);
-        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeUser));
+        UserEntity fakeEntity = mock(UserEntity.class);
+        when(userRepository.findById(1L)).thenReturn(Optional.of(fakeEntity));
         when(passwordEncoder.encode("NewPassword1")).thenReturn("NewHash");
 
         userService.changePassword(1L, "NewPassword1");
 
-        verify(fakeUser, times(1)).setPassword("NewHash");
-        verify(userRepository, times(1)).save(same(fakeUser));
+        verify(fakeEntity, times(1)).setPassword("NewHash");
+        verify(userRepository, times(1)).save(same(fakeEntity));
     }
 
     /**

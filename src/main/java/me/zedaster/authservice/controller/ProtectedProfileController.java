@@ -2,13 +2,16 @@ package me.zedaster.authservice.controller;
 
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
+import me.zedaster.authservice.dto.TokenPayload;
 import me.zedaster.authservice.dto.auth.JwtPairDto;
 import me.zedaster.authservice.dto.profile.ChangePasswordDto;
 import me.zedaster.authservice.dto.profile.ChangeUsernameDto;
 import me.zedaster.authservice.exception.AuthException;
 import me.zedaster.authservice.exception.ProfileException;
+import me.zedaster.authservice.model.Role;
 import me.zedaster.authservice.service.JwtService;
 import me.zedaster.authservice.service.UserService;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -30,26 +33,35 @@ public class ProtectedProfileController {
     private final JwtService jwtService;
 
     @PostMapping("/changeUsername")
+    @Transactional
     public JwtPairDto changeUsername(@Valid @RequestBody ChangeUsernameDto changeUsernameDto,
-                                     @RequestParam("tokenPayload.sub") Long userId)
+                                     @RequestParam("tokenPayload.sub") String sub,
+                                     @RequestParam("tokenPayload.username") String username,
+                                     @RequestParam("tokenPayload.role") Role role)
             throws AuthException, ProfileException {
-        if (!userService.isPasswordCorrect(userId, changeUsernameDto.getPassword())) {
+        TokenPayload tokenPayload = new TokenPayload(sub, username, role);
+        if (!userService.isPasswordCorrect(tokenPayload.getUserId(), changeUsernameDto.getPassword())) {
             throw new AuthException("The password is incorrect!");
         }
 
-        userService.changeUsername(userId, changeUsernameDto.getNewUsername());
-        return jwtService.generateTokens(userId, changeUsernameDto.getNewUsername());
+        userService.changeUsername(tokenPayload.getUserId(), changeUsernameDto.getNewUsername());
+        TokenPayload newTokenPayload = tokenPayload.copy();
+        newTokenPayload.setUsername(changeUsernameDto.getNewUsername());
+        return jwtService.generateTokens(newTokenPayload);
     }
 
     @PostMapping("/changePassword")
+    @Transactional
     public JwtPairDto changePassword(@Valid @RequestBody ChangePasswordDto changePasswordDto,
-                               @RequestParam("tokenPayload.sub") Long userId) throws AuthException {
-        if (!userService.isPasswordCorrect(userId, changePasswordDto.getOldPassword())) {
+                                     @RequestParam("tokenPayload.sub") String sub,
+                                     @RequestParam("tokenPayload.username") String username,
+                                     @RequestParam("tokenPayload.role") Role role) throws AuthException {
+        TokenPayload tokenPayload = new TokenPayload(sub, username, role);
+        if (!userService.isPasswordCorrect(tokenPayload.getUserId(), changePasswordDto.getOldPassword())) {
             throw new AuthException("The password is incorrect!");
         }
 
-        userService.changePassword(userId, changePasswordDto.getNewPassword());
-        String username = userService.getUsername(userId);
-        return jwtService.generateTokens(userId, username);
+        userService.changePassword(tokenPayload.getUserId(), changePasswordDto.getNewPassword());
+        return jwtService.generateTokens(tokenPayload);
     }
 }
